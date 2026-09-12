@@ -54,6 +54,7 @@
 - `-o`, `--output`: مسیر ذخیره‌سازی فایل (پیش‌فرض: پوشه فعلی)
 - `-y`, `--yes`: بازنویسی خودکار در صورت وجود فایل قبلی
 - `--stdout`: چاپ متن کانفیگ در خروجی بدون ذخیره روی دیسک
+- `-v`, `--version`: نمایش شماره نسخه برنامه
 
 ---
 
@@ -139,6 +140,7 @@ The program prompts for the link and automatically suggests the config name and 
 - `-o`, `--output`: Output directory path (default: current directory)
 - `-y`, `--yes`: Overwrite existing file without confirmation
 - `--stdout`: Print config content to stdout without saving to disk
+- `-v`, `--version`: Show program version
 
 ---
 

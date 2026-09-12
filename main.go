@@ -37,13 +37,17 @@ func getDefaultOutputDir() string {
 	return "."
 }
 
+// Version can be set at build time via -ldflags="-X main.Version=x.y.z"
+var Version = "1.0.0"
+
 func main() {
 	var (
-		flagLink   string
-		flagName   string
-		flagOutDir string
-		flagYes    bool
-		flagStdout bool
+		flagLink    string
+		flagName    string
+		flagOutDir  string
+		flagYes     bool
+		flagStdout  bool
+		flagVersion bool
 	)
 
 	flag.StringVar(&flagLink, "link", "", "WireGuard link (wireguard://... or wg://...)")
@@ -55,8 +59,15 @@ func main() {
 	flag.BoolVar(&flagYes, "yes", false, "Overwrite existing file without confirmation")
 	flag.BoolVar(&flagYes, "y", false, "Overwrite existing file (shorthand)")
 	flag.BoolVar(&flagStdout, "stdout", false, "Print configuration to stdout instead of saving to file")
+	flag.BoolVar(&flagVersion, "version", false, "Show version information")
+	flag.BoolVar(&flagVersion, "v", false, "Show version information (shorthand)")
 
 	flag.Parse()
+
+	if flagVersion {
+		fmt.Printf("Wireguard link to Config v%s\n", Version)
+		return
+	}
 
 	reader := bufio.NewReader(os.Stdin)
 	isInteractive := flagLink == ""
@@ -75,7 +86,7 @@ func main() {
 
 	if isInteractive {
 		fmt.Println("============================================")
-		fmt.Println("        Wireguard link to Config            ")
+		fmt.Printf("      Wireguard link to Config v%s\n", Version)
 		fmt.Println("============================================")
 		fmt.Println()
 

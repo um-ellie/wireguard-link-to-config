@@ -11,6 +11,8 @@ import sys
 import urllib.parse
 from pathlib import Path
 
+__version__ = "1.0.0"
+
 
 def sanitize_config_name(name: str) -> str:
     """Clean and validate the configuration file name."""
@@ -179,6 +181,7 @@ def main():
     parser.add_argument("-o", "--output", help="Output directory path")
     parser.add_argument("-y", "--yes", action="store_true", help="Overwrite existing files without prompting")
     parser.add_argument("--stdout", action="store_true", help="Print configuration to stdout instead of saving")
+    parser.add_argument("-v", "--version", action="version", version=f"Wireguard link to Config v{__version__}")
 
     args = parser.parse_args()
     is_interactive = not args.link
@@ -191,7 +194,7 @@ def main():
     try:
         if is_interactive:
             print("========================================")
-            print("        Wireguard link to Config        ")
+            print(f"      Wireguard link to Config v{__version__}")
             print("========================================\n")
 
             while True:
