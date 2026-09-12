@@ -1,0 +1,43 @@
+# Tools and local dependencies
+.tools/
+
+# Compiled binaries and release distributions
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# WireGuard generated configurations (protect secrets and private keys)
+*.conf
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.eggs/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor and IDE directories
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
