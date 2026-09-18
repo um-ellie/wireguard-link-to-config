@@ -38,7 +38,7 @@ func getDefaultOutputDir() string {
 }
 
 // Version can be set at build time via -ldflags="-X main.Version=x.y.z"
-var Version = "1.0.0"
+var Version = "1.1.0"
 
 // saveConfigFile writes the configuration to disk with chosen permissions.
 func saveConfigFile(targetFilePath string, confContent string, chmod600 bool, overwrite bool, reader *bufio.Reader, isInteractive bool) (bool, error) {

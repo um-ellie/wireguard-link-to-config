@@ -14,7 +14,7 @@ if ! command -v go >/dev/null 2>&1; then
     exit 1
 fi
 
-VERSION="${VERSION:-1.0.0}"
+VERSION="${VERSION:-1.1.0}"
 # Clean leading 'v' if present (e.g. v1.0.0 -> 1.0.0)
 VERSION="${VERSION#v}"
 
