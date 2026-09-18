@@ -3,28 +3,40 @@
 
 # Compiled binaries and release distributions
 dist/
+/wireguard-link-to-config
+/wg-link-to-conf
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
 
+# Go build and test artifacts
+*.test
+*.out
+
 # WireGuard generated configurations (protect secrets and private keys)
 *.conf
+*.conf.bak
 
 # Python artifacts
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
 .pytest_cache/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
 *.egg-info/
 .eggs/
+.mypy_cache/
+.ruff_cache/
 
-# Environments
+# Environments and secrets
 .env
+.env.*
+!.env.example
 .venv
 env/
 venv/
@@ -41,3 +53,6 @@ desktop.ini
 *.swp
 *.swo
 *~
+
+# Logs
+*.log
