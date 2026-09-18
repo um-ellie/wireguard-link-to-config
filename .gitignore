@@ -3,6 +3,7 @@
 
 # Compiled binaries and release distributions
 dist/
+RELEASE_NOTES.md
 /wireguard-link-to-config
 /wg-link-to-conf
 *.exe
