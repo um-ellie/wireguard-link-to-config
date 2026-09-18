@@ -48,6 +48,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          name: ${{ github.ref_name }}
           files: |
             dist/wireguard-link-to-config-linux-amd64
             dist/wireguard-link-to-config-windows-amd64.exe

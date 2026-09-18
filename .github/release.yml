@@ -1,0 +1,38 @@
+changelog:
+  categories:
+    - title: "Features"
+      labels:
+        - "feature"
+        - "feat"
+        - "enhancement"
+    - title: "Bug Fixes"
+      labels:
+        - "fix"
+        - "bug"
+        - "bugfix"
+    - title: "Documentation"
+      labels:
+        - "documentation"
+        - "docs"
+    - title: "Refactoring & Performance"
+      labels:
+        - "refactor"
+        - "perf"
+        - "performance"
+    - title: "Maintenance & CI"
+      labels:
+        - "chore"
+        - "ci"
+        - "test"
+        - "build"
+        - "dependencies"
+    - title: "Other Changes"
+      labels:
+        - "*"
+  exclude:
+    labels:
+      - "ignore-for-release"
+      - "skip-changelog"
+    authors:
+      - "dependabot"
+      - "dependabot[bot]"
