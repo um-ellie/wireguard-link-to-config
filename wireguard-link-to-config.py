@@ -40,6 +40,11 @@ def get_first_param(params: dict, *keys: str) -> str:
     return ""
 
 
+def clean_base64_key(key: str) -> str:
+    """Ensure spaces caused by URL decoding are restored to '+' in base64 keys."""
+    return key.strip().replace(" ", "+")
+
+
 def parse_wireguard_link(link: str) -> dict:
     """
     Parse a WireGuard URI (wireguard:// or wg://) and return a dictionary with configuration fields.
@@ -56,25 +61,43 @@ def parse_wireguard_link(link: str) -> dict:
     else:
         raise ValueError("Invalid link format. Must start with 'wireguard://' or 'wg://'.")
 
-    # Replace custom scheme with https:// for standard URI parsing
-    normalized_url = "https://" + link[scheme_len:]
-    parsed = urllib.parse.urlparse(normalized_url)
-    params = urllib.parse.parse_qs(parsed.query)
+    remainder = link[scheme_len:]
 
-    # Extract private key (from userinfo or query)
-    private_key = urllib.parse.unquote(parsed.username or "")
+    # Extract fragment (#name)
+    fragment = ""
+    if "#" in remainder:
+        remainder, raw_fragment = remainder.split("#", 1)
+        fragment = urllib.parse.unquote(raw_fragment).strip()
+
+    # Extract query (?params)
+    query_str = ""
+    if "?" in remainder:
+        remainder, query_str = remainder.split("?", 1)
+
+    params = urllib.parse.parse_qs(query_str, keep_blank_values=True)
+
+    # Authority: [userinfo@]endpoint[/]
+    authority = remainder.strip("/")
+
+    private_key = ""
+    endpoint = ""
+
+    if "@" in authority:
+        raw_userinfo, endpoint = authority.rsplit("@", 1)
+        private_key = clean_base64_key(urllib.parse.unquote(raw_userinfo))
+    else:
+        endpoint = authority
+
+    endpoint = endpoint.strip("/")
+
+    # Fallback to query parameters if not found in authority
     if not private_key:
-        private_key = get_first_param(params, "privatekey", "private_key", "privkey")
-    private_key = urllib.parse.unquote(private_key)
+        private_key = clean_base64_key(get_first_param(params, "privatekey", "private_key", "privkey"))
 
-    # Extract endpoint (from host or query)
-    endpoint = parsed.netloc.split("@")[-1]
     if not endpoint:
-        endpoint = get_first_param(params, "endpoint", "host")
+        endpoint = get_first_param(params, "endpoint", "host").strip("/")
 
-    # Extract public key
-    public_key = get_first_param(params, "publickey", "public_key", "pubkey")
-    public_key = urllib.parse.unquote(public_key)
+    public_key = clean_base64_key(get_first_param(params, "publickey", "public_key", "pubkey"))
 
     if not private_key:
         raise ValueError("Missing required field: PrivateKey.")
@@ -96,15 +119,12 @@ def parse_wireguard_link(link: str) -> dict:
     # Optional fields
     preshared_key = get_first_param(params, "presharedkey", "preshared_key", "psk")
     if preshared_key:
-        preshared_key = urllib.parse.unquote(preshared_key)
+        preshared_key = clean_base64_key(preshared_key)
 
     keepalive = get_first_param(params, "persistent_keepalive", "persistentkeepalive", "keepalive")
 
-    # Extract config name from URL fragment (e.g. #Germany)
-    fragment_name = urllib.parse.unquote(parsed.fragment) if parsed.fragment else ""
-
     return {
-        "name": fragment_name,
+        "name": fragment,
         "private_key": private_key,
         "public_key": public_key,
         "endpoint": endpoint,
@@ -115,6 +135,33 @@ def parse_wireguard_link(link: str) -> dict:
         "preshared_key": preshared_key,
         "persistent_keepalive": keepalive,
     }
+
+
+def parse_batch_links(content: str) -> tuple[list[dict], list[str]]:
+    """
+    Parse multiple WireGuard links from a text file content.
+    Returns (list_of_configs, list_of_errors).
+    """
+    configs = []
+    errors = []
+    lines = content.splitlines()
+
+    for idx, line in enumerate(lines, 1):
+        line = line.strip().strip('"\'')
+        if not line or line.startswith("#") or line.startswith("//"):
+            continue
+
+        lower = line.lower()
+        if not lower.startswith("wireguard://") and not lower.startswith("wg://"):
+            continue
+
+        try:
+            cfg = parse_wireguard_link(line)
+            configs.append(cfg)
+        except Exception as e:
+            errors.append(f"Line {idx}: {e}")
+
+    return configs, errors
 
 
 def generate_conf_content(config_data: dict) -> str:
@@ -172,19 +219,51 @@ def prompt_user(message: str, default: str = "") -> str:
     return input(f"{message}: ").strip()
 
 
+def save_single_file(
+    output_file: Path,
+    conf_content: str,
+    chmod_600: bool,
+    overwrite: bool,
+    is_interactive: bool,
+) -> bool:
+    """Write configuration file to disk with the desired permissions."""
+    if output_file.exists() and not overwrite:
+        if is_interactive:
+            ans = prompt_user(f"File '{output_file.name}' already exists. Overwrite? [y/N]", "n").lower()
+            if ans not in ("y", "yes"):
+                print(f"Skipped '{output_file.name}'.")
+                return False
+        else:
+            raise FileExistsError(f"File '{output_file}' already exists. Use -y / --yes to overwrite.")
+
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write(conf_content)
+
+    if os.name != "nt" and chmod_600:
+        try:
+            os.chmod(output_file, 0o600)
+        except OSError:
+            pass
+
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Convert WireGuard URI links to .conf files (Windows & Linux compatible)."
     )
     parser.add_argument("-l", "--link", help="WireGuard link (wireguard:// or wg://)")
-    parser.add_argument("-n", "--name", help="Configuration name (e.g. wg0 or Server1)")
+    parser.add_argument("-f", "--file", help="Path to text file containing WireGuard link(s)")
+    parser.add_argument("-n", "--name", help="Configuration name (e.g. wg0 or Server1, for single link)")
     parser.add_argument("-o", "--output", help="Output directory path")
     parser.add_argument("-y", "--yes", action="store_true", help="Overwrite existing files without prompting")
+    parser.add_argument("-p", "--chmod-600", action="store_true", help="Set restrictive file permissions (chmod 600)")
     parser.add_argument("--stdout", action="store_true", help="Print configuration to stdout instead of saving")
     parser.add_argument("-v", "--version", action="version", version=f"Wireguard link to Config v{__version__}")
 
     args = parser.parse_args()
-    is_interactive = not args.link
+    is_interactive = not args.link and not args.file
 
     # On Windows interactive session, keep console window open on exit
     def exit_handler():
@@ -192,38 +271,70 @@ def main():
             input("\nPress Enter to exit...")
 
     try:
+        configs = []
+        is_batch = False
+
         if is_interactive:
             print("========================================")
             print(f"      Wireguard link to Config v{__version__}")
             print("========================================\n")
 
             while True:
-                link = prompt_user("Enter WireGuard config link")
-                if link:
+                raw_input = prompt_user("Enter WireGuard link or file path (.txt)")
+                if raw_input:
                     break
-                print("Error: Configuration link cannot be empty. Please try again.\n")
-        else:
-            link = args.link
+                print("Error: Input cannot be empty. Please try again.\n")
 
-        # Parse config link
-        config_data = parse_wireguard_link(link)
-
-        # Determine config name
-        config_name = args.name
-        if not config_name:
-            if is_interactive:
-                default_name = config_data["name"] or "wg0"
-                config_name = prompt_user("Enter configuration name", default_name)
+            input_path = Path(raw_input).expanduser()
+            if input_path.is_file():
+                content = input_path.read_text(encoding="utf-8")
+                cfgs, errors = parse_batch_links(content)
+                for err in errors:
+                    print(f"Warning: {err}", file=sys.stderr)
+                if not cfgs:
+                    raise ValueError(f"No valid WireGuard links found in '{input_path}'.")
+                configs = cfgs
+                is_batch = True
+                print(f"Loaded {len(configs)} link(s) from '{input_path}'.")
             else:
-                config_name = config_data["name"] or "wg0"
+                configs = [parse_wireguard_link(raw_input)]
+                is_batch = False
+        elif args.file:
+            input_path = Path(args.file).expanduser()
+            if not input_path.is_file():
+                raise FileNotFoundError(f"File not found: '{args.file}'")
+            content = input_path.read_text(encoding="utf-8")
+            cfgs, errors = parse_batch_links(content)
+            for err in errors:
+                print(f"Warning: {err}", file=sys.stderr)
+            if not cfgs:
+                raise ValueError(f"No valid WireGuard links found in '{input_path}'.")
+            configs = cfgs
+            is_batch = len(configs) > 1
+        else:
+            configs = [parse_wireguard_link(args.link)]
+            is_batch = False
 
-        config_name = sanitize_config_name(config_name)
-
-        conf_content = generate_conf_content(config_data)
-
+        # Output to stdout if requested
         if args.stdout:
-            print(conf_content, end="")
+            for idx, cfg in enumerate(configs):
+                if len(configs) > 1:
+                    cfg_name = cfg["name"] or f"wg{idx}"
+                    print(f"# Configuration: {cfg_name}.conf")
+                print(generate_conf_content(cfg), end="")
+                if idx < len(configs) - 1:
+                    print("\n---")
             return
+
+        # Name handling for single link
+        if not is_batch and len(configs) == 1:
+            if args.name:
+                configs[0]["name"] = args.name
+            elif is_interactive:
+                default_name = configs[0]["name"] or "wg0"
+                configs[0]["name"] = prompt_user("Enter configuration name", default_name)
+            elif not configs[0]["name"]:
+                configs[0]["name"] = "wg0"
 
         # Determine output directory
         if args.output:
@@ -235,42 +346,59 @@ def main():
         else:
             output_dir = get_default_output_dir()
 
-        output_file = output_dir / f"{config_name}.conf"
+        # Permission prompt in interactive mode on non-Windows
+        apply_chmod_600 = args.chmod_600
+        if is_interactive and os.name != "nt":
+            ans = prompt_user("Set restrictive file permissions (chmod 600 - private key protected)? [y/N]", "n").lower()
+            apply_chmod_600 = ans in ("y", "yes")
 
-        # Check existing file
-        if output_file.exists() and not args.yes:
-            if is_interactive:
-                ans = prompt_user(f"File '{output_file}' already exists. Overwrite? [y/N]", "n").lower()
-                if ans not in ("y", "yes"):
-                    print("Operation cancelled.")
-                    return
+        used_names: dict[str, int] = {}
+        success_count = 0
+        print()
+
+        for idx, cfg in enumerate(configs):
+            raw_name = cfg["name"] or f"wg{idx}"
+            sanitized = sanitize_config_name(raw_name)
+
+            if sanitized in used_names:
+                used_names[sanitized] += 1
+                final_name = f"{sanitized}_{used_names[sanitized]}"
             else:
-                print(f"Error: File '{output_file}' already exists. Use -y / --yes to overwrite.", file=sys.stderr)
-                sys.exit(1)
+                used_names[sanitized] = 0
+                final_name = sanitized
 
-        # Create output directory
-        output_dir.mkdir(parents=True, exist_ok=True)
+            output_file = output_dir / f"{final_name}.conf"
+            conf_content = generate_conf_content(cfg)
 
-        # Write configuration
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write(conf_content)
+            saved = save_single_file(
+                output_file=output_file,
+                conf_content=conf_content,
+                chmod_600=apply_chmod_600,
+                overwrite=args.yes,
+                is_interactive=is_interactive,
+            )
 
-        # Secure permissions on POSIX systems (skip on Windows)
-        if os.name != "nt":
-            try:
-                os.chmod(output_file, 0o600)
-            except Exception:
-                pass
+            if saved:
+                success_count += 1
+                if is_batch or len(configs) > 1:
+                    print(f"[✔] Saved: {final_name}.conf -> {output_file.resolve()}")
+                else:
+                    print("[✔] Success: WireGuard configuration created successfully.")
+                    print(f"Name      : {final_name}")
+                    print(f"Path      : {output_file.resolve()}")
+                    if cfg.get("mtu"):
+                        print(f"MTU       : {cfg['mtu']}")
+                    if cfg.get("persistent_keepalive"):
+                        print(f"Keepalive : {cfg['persistent_keepalive']}s")
+                    if os.name != "nt":
+                        perms_str = "600 (Private)" if apply_chmod_600 else "Default (Standard)"
+                        print(f"Permission: {perms_str}")
 
-        print("\n[✔] Success: WireGuard configuration created successfully.")
-        print(f"Name      : {config_name}")
-        print(f"Path      : {output_file.resolve()}")
-        if config_data.get("mtu"):
-            print(f"MTU       : {config_data['mtu']}")
-        if config_data.get("persistent_keepalive"):
-            print(f"Keepalive : {config_data['persistent_keepalive']}s")
-        if os.name != "nt":
-            print("Permission: 600 (Private)")
+        if is_batch or len(configs) > 1:
+            print(f"\n[✔] Batch conversion complete: {success_count} of {len(configs)} configuration(s) saved in '{output_dir.resolve()}'.")
+            if os.name != "nt":
+                perms_str = "600 (Private)" if apply_chmod_600 else "Default (Standard)"
+                print(f"Permission: {perms_str}")
 
     except Exception as err:
         print(f"\nError: {err}", file=sys.stderr)

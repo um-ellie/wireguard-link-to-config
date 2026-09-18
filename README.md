@@ -1,20 +1,24 @@
 # Wireguard link to Config
 
-این برنامه یه ابزار کوچیک و ساده‌ست که نوشتم تا لینک‌های وایرگارد (wireguard:// یا wg://) رو خیلی راحت و بی‌دردسر به فایل استاندارد کانفیگ (.conf) تبدیل کنه، همین!
+این برنامه یه ابزار کوچیک و کاربردی است که لینک‌های وایرگارد (`wireguard://` یا `wg://`) را به فایل‌های استاندارد کانفیگ (`.conf`) تبدیل می‌کند.
 
-خیلی وقتا کانفیگ وایرگارد رو به صورت لینک دریافت می‌کنیم، اما کلاینت‌های رسمی دسکتاپ (مخصوصاً توی ویندوز و لینوکس) فایل .conf می‌خوان و نمیشه لینک رو مستقیم توشون ایمپورت کرد. برای اینکه هر دفعه نخواهیم دستی بشینیم کلیدها، آدرس‌ها و اندپوینت رو از داخل لینک جدا کنیم، این ابزار این کار رو خودکار و توی یه ثانیه انجام میده.
+خیلی وقتا کانفیگ وایرگارد رو به صورت لینک دریافت می‌کنیم، اما کلاینت‌های رسمی دسکتاپ (مخصوصاً توی ویندوز و لینوکس) فایل `.conf` می‌خوان و نمیشه لینک رو مستقیم توشون ایمپورت کرد. این ابزار به راحتی لینک‌های تکی یا دسته‌ای را از متن یا فایل می‌خواند و کانفیگ‌های مرتب می‌سازد.
 
 ---
 
 ## ویژگی‌ها و نکات مهم
 
-- **امن در ویندوز (بدون بلاک یا حذف توسط Defender):** خروجی کامپایل‌شده زبان Go یک فایل باینری واقعی (Native PE) است و برخلاف ابزارهایی مثل PyInstaller، هیچ نیازی به استخراج فایل در پوشه موقت (%TEMP%) ندارد و توسط سیستم‌های امنیتی ویندوز کاملاً معتبر شناخته می‌شود.
-- **سازگاری کامل مسیرها و دسترسی‌ها:**
-  - در ویندوز: ذخیره در مسیر جاری و جلوگیری از بسته شدن ناگهانی کنسول در صورت دابل‌کلیک.
-  - در لینوکس: تنظیم خودکار دسترسی فایل روی chmod 600 جهت حفظ امنیت کلید خصوصی.
-- **دست‌کاری نکردن MTU:** سرخود مقداری برای MTU تنظیم نمیکنه تا اتصال شبکه به هم نریزه؛ فقط در صورتی که خود لینک حاوی مقدار MTU باشه اون رو به فایل اضافه میکنه.
-- **فهمیدن خودکار اسم کانفیگ:** اگه آخر لینک بعد از کاراکتر # اسم سرور یا لوکیشن قید شده باشه، خودش استخراجش میکنه و به عنوان اسم پیش‌فرض پیشنهاد میده.
-- **نسخه پایتون:** اگه ترجیح میدید به جای باینری از اسکریپت پایتون استفاده کنید، فایل `wireguard-link-to-config.py` هم داخل پروژه در دسترسه.
+- **امن در ویندوز (بدون بلاک یا حذف توسط Defender):** خروجی کامپایل‌شده زبان Go یک فایل باینری واقعی (Native PE) است و هیچ وابستگی خارجی یا نیاز به استخراج فایل در پوشه موقت ندارد.
+- **کنترل هوشمند سطح دسترسی فایل (اختیاری بودن chmod 600):** 
+  - در حالت تعاملی (Interactive) در لینوکس از شما سوال پرسیده می‌شود که آیا مایل به اعمال سطح دسترسی ۶۰۰ (فقط خواندنی برای کاربر جاری) هستید یا سطح دسترسی پیش‌فرض سیستم را می‌خواهید.
+  - در خط فرمان (CLI) با فلگ اختیاری `-p` یا `--chmod-600` فعال می‌شود.
+- **پشتیبانی از فایل و تبدیل گروهی (Batch Processing):**
+  - امکان معرفی یک فایل متنی حاوی چندین لینک وایرگارد با پارامتر `-f` یا وارد کردن آدرس فایل در ورودی تعاملی.
+  - نام‌گذاری خودکار و هوشمند برای جلوگیری از تداخل نام‌ها در تبدیل گروهی (مثل `Server.conf` و `Server_1.conf`).
+- **پارس دقیق و مقاوم در برابر کاراکترهای خاص:** پشتیبانی کامل از لینک‌های دارای URL Encode (`%3D`، `%2F`، `%2C`)، کاراکترهای `+` و `/` در کلیدهای Base64 و ساختارهای مختلف لینک‌ها.
+- **دست‌کاری نکردن MTU:** سرخود مقداری برای MTU تنظیم نمی‌کند؛ فقط در صورتی که خود لینک حاوی مقدار MTU باشد آن را به فایل اضافه می‌کند.
+- **فهمیدن خودکار اسم کانفیگ:** استخراج خودکار اسم سرور/لوکیشن از انتهای لینک بعد از کاراکتر `#`.
+- **نسخه پایتون:** علاوه بر فایل اجرایی Go، اسکریپت `wireguard-link-to-config.py` نیز در دسترس است.
 
 ---
 
@@ -40,18 +44,31 @@
   ./dist/wireguard-link-to-config
   ```
 
-برنامه لینک را می‌پرسد و نام کانفیگ و مسیر ذخیره را به صورت خودکار پیشنهاد می‌دهد (کافیست Enter بزنید).
+برنامه لینک را می‌پرسد (می‌توانید یک لینک تکی یا آدرس یک فایل متنی `.txt` حاوی چندین لینک را وارد کنید) و گزینه‌ها را به شما پیشنهاد می‌دهد.
 
 ### ۲. اجرای سریع با خط فرمان (CLI)
 
+**تبدیل یک لینک تکی:**
 ```bash
 ./dist/wireguard-link-to-config -l "wireguard://...#Germany" -o ./configs
 ```
 
+**تبدیل گروهی لینک‌ها از یک فایل متنی:**
+```bash
+./dist/wireguard-link-to-config -f links.txt -o ./configs
+```
+
+**اعمال دسترسی اختصاصی ۶۰۰ در لینوکس:**
+```bash
+./dist/wireguard-link-to-config -f links.txt -o ./configs -p
+```
+
 **پارامترهای خط فرمان:**
-- `-l`, `--link`: لینک وایرگارد (wireguard://... یا wg://...)
-- `-n`, `--name`: نام دلخواه برای فایل کانفیگ
+- `-l`, `--link`: لینک وایرگارد (`wireguard://...` یا `wg://...`)
+- `-f`, `--file`: مسیر فایل متنی حاوی لینک(ها) برای تبدیل تکی یا گروهی
+- `-n`, `--name`: نام دلخواه برای فایل کانفیگ (مخصوص لینک تکی)
 - `-o`, `--output`: مسیر ذخیره‌سازی فایل (پیش‌فرض: پوشه فعلی)
+- `-p`, `--chmod-600`: اعمال سطح دسترسی محدود ۶۰۰ روی فایل(ها)
 - `-y`, `--yes`: بازنویسی خودکار در صورت وجود فایل قبلی
 - `--stdout`: چاپ متن کانفیگ در خروجی بدون ذخیره روی دیسک
 - `-v`, `--version`: نمایش شماره نسخه برنامه
@@ -86,84 +103,57 @@ python3 test_wireguard_link_to_config.py
 
 # Wireguard link to Config (English)
 
-This is a small, simple utility created to convert WireGuard links (wireguard:// or wg://) into standard .conf configuration files.
+A simple, fast, and robust utility to convert WireGuard links (`wireguard://` or `wg://`) into standard `.conf` configuration files.
 
-Often WireGuard configs are shared as URLs, but official desktop clients on Windows and Linux expect a .conf file instead of a link. Rather than manually parsing and copying keys, endpoints, and addresses by hand, this tool takes care of it automatically in a second.
+Desktop clients (especially on Windows and Linux) require `.conf` files. This tool automates the process for single links or batch conversions from text files.
 
 ---
 
 ## Key Features
 
-- **Safe on Windows (No Defender false positives):** Compiled with Go as a true native binary (Native PE). Unlike tools like PyInstaller, it never extracts anything to %TEMP% and is recognized as safe by Windows security systems.
-- **Cross-platform path and permission handling:**
-  - On Windows: Saves to the current directory and prevents the console window from closing instantly when double-clicked.
-  - On Linux: Automatically applies chmod 600 permissions to protect the private key.
-- **Safe MTU handling:** Does not set an arbitrary MTU to prevent network disruption; it only includes MTU if the input link explicitly specifies one.
-- **Automatic name detection:** Automatically extracts the server or location name from the # fragment at the end of the link and suggests it as default.
-- **Python alternative:** If you prefer using Python directly, `wireguard-link-to-config.py` is also available in the repository.
-
----
-
-## Prebuilt Binaries
-
-Binaries are located in the `dist/` folder:
-
-- **Windows:** `dist/wireguard-link-to-config.exe`
-- **Linux:** `dist/wireguard-link-to-config`
+- **Safe on Windows (No Defender false positives):** Compiled with Go as a true native binary (Native PE) without temp-directory extractions.
+- **Optional file permissions (chmod 600):** Does not force chmod 600 automatically; asks the user in interactive mode or enables via `-p / --chmod-600` CLI flag.
+- **File input & Batch processing:** Read single or multiple links from a text file (`-f / --file`) with automatic collision-free file naming.
+- **Robust URL & Base64 parsing:** Handles URL-encoded characters (`%3D`, `%2F`, `%2C`), plus `+` and `/` characters inside base64 keys without corruption.
+- **Safe MTU handling:** MTU is only written if explicitly present in the link.
+- **Automatic name detection:** Extracts names from the `#Fragment` section.
+- **Python alternative:** `wireguard-link-to-config.py` is included with identical features.
 
 ---
 
 ## Usage
 
-### 1. Interactive Mode
+### Interactive Mode
+```bash
+./dist/wireguard-link-to-config
+# or on Windows:
+wireguard-link-to-config.exe
+```
+Enter a link or a path to a `.txt` file containing links.
 
-- **On Windows:** Double-click `wireguard-link-to-config.exe` or run in terminal:
-  ```cmd
-  wireguard-link-to-config.exe
-  ```
-- **On Linux:**
-  ```bash
-  ./dist/wireguard-link-to-config
-  ```
+### Command-line Mode (CLI)
 
-The program prompts for the link and automatically suggests the config name and output path (just press Enter).
-
-### 2. Command-line Mode (CLI)
-
+**Single Link:**
 ```bash
 ./dist/wireguard-link-to-config -l "wireguard://...#Germany" -o ./configs
 ```
 
+**Batch Convert from File:**
+```bash
+./dist/wireguard-link-to-config -f links.txt -o ./configs
+```
+
+**With chmod 600 permissions:**
+```bash
+./dist/wireguard-link-to-config -f links.txt -o ./configs -p
+```
+
 **CLI Flags:**
-- `-l`, `--link`: WireGuard link (wireguard://... or wg://...)
-- `-n`, `--name`: Desired config name
+- `-l`, `--link`: WireGuard link (`wireguard://...` or `wg://...`)
+- `-f`, `--file`: Path to file containing WireGuard link(s)
+- `-n`, `--name`: Desired config name (for single link)
 - `-o`, `--output`: Output directory path (default: current directory)
-- `-y`, `--yes`: Overwrite existing file without confirmation
+- `-p`, `--chmod-600`: Apply restrictive file permissions (chmod 600)
+- `-y`, `--yes`: Overwrite existing files without confirmation
 - `--stdout`: Print config content to stdout without saving to disk
 - `-v`, `--version`: Show program version
-
----
-
-## Tests
-
-To verify functionality:
-
-```bash
-# Run Go unit tests
-go test -v ./...
-
-# Run Python unit tests
-python3 test_wireguard_link_to_config.py
-```
-
----
-
-## Building from Source
-
-To recompile both Linux and Windows binaries at any time:
-
-```bash
-./build.sh
-```
-
-Binaries will be generated inside the `dist/` directory.
