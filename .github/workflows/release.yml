@@ -15,8 +15,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -47,15 +45,10 @@ jobs:
           # Windows amd64 (.exe)
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o dist/wireguard-link-to-config-windows-amd64.exe main.go parser.go
 
-      - name: Generate Release Notes
-        run: python3 .github/scripts/generate-release-notes.py RELEASE_NOTES.md
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
-          body_path: RELEASE_NOTES.md
           files: |
             dist/wireguard-link-to-config-linux-amd64
             dist/wireguard-link-to-config-windows-amd64.exe
-          generate_release_notes: true
